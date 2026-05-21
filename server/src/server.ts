@@ -45,6 +45,29 @@ app.get("/api/health", (_req, res) => {
   res.json({ success: true, data: { status: "ok" }, message: "InternConnect API is running." });
 });
 
+// Database schema auto-initializer
+app.get("/api/health/init-db", async (_req, res) => {
+  try {
+    const { POSTGRES_SCHEMA } = await import("./db/schema_postgres");
+    const db = await getDb();
+    
+    console.log("🚀 Executing database initialization from endpoint...");
+    await db.run(POSTGRES_SCHEMA);
+    
+    return res.json({
+      success: true,
+      message: "🎉 Database schema initialized successfully on Supabase!"
+    });
+  } catch (error: any) {
+    console.error("Failed to initialize database from endpoint:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
+      message: error.message || "An unexpected error occurred during database setup."
+    });
+  }
+});
+
 // Serve static frontend in production if built
 const frontendDistPath = path.join(__dirname, "../../dist");
 if (fs.existsSync(frontendDistPath)) {
