@@ -85,8 +85,8 @@ profileRouter.put("/student/profile", authenticateJWT, requireRole(["student"]),
     // Fetch the updated student profile
     const profile = await db.get("SELECT * FROM student_profiles WHERE user_id = ?", [userId]);
 
-    // Recalculate match scores asynchronously
-    recalculateStudentMatchScores(userId, skills || "");
+    // Recalculate match scores before sending response
+    await recalculateStudentMatchScores(userId, skills || "");
 
     return res.json({
       success: true,

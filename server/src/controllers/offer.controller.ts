@@ -129,8 +129,8 @@ offerRouter.post("/", authenticateJWT, requireRole(["company"]), async (req: Aut
     const offerId = result.lastID!;
     const offer = await db.get("SELECT * FROM offers WHERE id = ?", [offerId]);
 
-    // Trigger async match score computation for all students
-    setImmediate(() => recalculateAllStudentsForOffer(offerId, title, description));
+    // Recalculate match scores for all students before returning
+    await recalculateAllStudentsForOffer(offerId, title, description);
 
     return res.status(201).json({ success: true, data: offer, message: "Offer created successfully." });
   } catch (error: any) {
