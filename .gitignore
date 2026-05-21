@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Build outputs
+dist/
+server/dist/
+
+# Environment files (keep secrets safe!)
+.env
+.env.local
+.env.production
+server/.env
+
+# Database (don't push local data)
+*.sqlite
+*.db
+server/src/db/*.sqlite
+server/src/db/*.db
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
