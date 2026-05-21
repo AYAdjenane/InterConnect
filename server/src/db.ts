@@ -13,6 +13,7 @@ let pgPool: pg.Pool | null = null;
 
 class PostgresDatabase implements DatabaseInterface {
   private pool: pg.Pool;
+  private transactionClient: pg.PoolClient | null = null;
 
   constructor(pool: pg.Pool) {
     this.pool = pool;
@@ -39,13 +40,19 @@ class PostgresDatabase implements DatabaseInterface {
 
   async get(sql: string, params: any[] = []): Promise<any> {
     const { sql: pgSql, params: pgParams } = this.convertQuery(sql, params);
-    const res = await this.pool.query(pgSql, pgParams);
+    
+    // Use transaction client if active, otherwise grab from pool
+    const executor = this.transactionClient || this.pool;
+    const res = await executor.query(pgSql, pgParams);
     return res.rows[0] || null;
   }
 
   async all(sql: string, params: any[] = []): Promise<any[]> {
     const { sql: pgSql, params: pgParams } = this.convertQuery(sql, params);
-    const res = await this.pool.query(pgSql, pgParams);
+    
+    // Use transaction client if active, otherwise grab from pool
+    const executor = this.transactionClient || this.pool;
+    const res = await executor.query(pgSql, pgParams);
     return res.rows;
   }
 
@@ -58,8 +65,38 @@ class PostgresDatabase implements DatabaseInterface {
       return { changes: 0 };
     }
 
+    // Handle Transactions: Acquire a single client and keep it for the transaction duration
+    if (upperSql.startsWith("BEGIN")) {
+      if (!this.transactionClient) {
+        this.transactionClient = await this.pool.connect();
+      }
+      await this.transactionClient.query("BEGIN");
+      return { changes: 0 };
+    }
+
+    if (upperSql.startsWith("COMMIT")) {
+      if (this.transactionClient) {
+        await this.transactionClient.query("COMMIT");
+        this.transactionClient.release();
+        this.transactionClient = null;
+      }
+      return { changes: 0 };
+    }
+
+    if (upperSql.startsWith("ROLLBACK")) {
+      if (this.transactionClient) {
+        await this.transactionClient.query("ROLLBACK");
+        this.transactionClient.release();
+        this.transactionClient = null;
+      }
+      return { changes: 0 };
+    }
+
     const { sql: pgSql, params: pgParams } = this.convertQuery(sql, params);
-    const res = await this.pool.query(pgSql, pgParams);
+    
+    // Use transaction client if active, otherwise grab from pool
+    const executor = this.transactionClient || this.pool;
+    const res = await executor.query(pgSql, pgParams);
 
     let lastID: number | undefined;
     if (res.rows && res.rows.length > 0 && res.rows[0].id !== undefined) {
@@ -91,7 +128,6 @@ export async function getDb(): Promise<DatabaseInterface> {
   } else {
     console.log("💾 No DATABASE_URL found. Falling back to local SQLite database...");
     
-    // Dynamically import SQLite libraries to avoid Vercel build binary issues
     const { open } = await import("sqlite");
     const sqlite3 = await import("sqlite3");
 
@@ -103,7 +139,6 @@ export async function getDb(): Promise<DatabaseInterface> {
 
     await sqliteDb.run("PRAGMA foreign_keys = ON;");
 
-    // Wrap SQLite instance to conform perfectly to DatabaseInterface
     dbInstance = {
       async get(sql: string, params: any[] = []): Promise<any> {
         return sqliteDb.get(sql, params);
