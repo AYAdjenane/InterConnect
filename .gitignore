@@ -2,9 +2,9 @@
 node_modules/
 server/node_modules/
 
-# Build outputs
-dist/
-server/dist/
+# Build outputs (keep dist for Glitch deployment)
+# dist/
+# server/dist/
 
 # Environment files (keep secrets safe!)
 .env
