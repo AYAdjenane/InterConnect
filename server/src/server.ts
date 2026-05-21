@@ -64,7 +64,7 @@ app.use((_req, res) => {
   res.status(404).json({ success: false, error: "Not Found", message: "Route not found." });
 });
 
-// Start server with DB init
+// Start server with DB init (only if not running inside Vercel serverless environment)
 async function start() {
   await getDb();
   app.listen(PORT, () => {
@@ -72,8 +72,12 @@ async function start() {
   });
 }
 
-start().catch((err) => {
-  console.error("Failed to start server:", err);
-  process.exit(1);
-});
+if (!process.env.VERCEL) {
+  start().catch((err) => {
+    console.error("Failed to start server:", err);
+    process.exit(1);
+  });
+}
+
+export default app;
 
