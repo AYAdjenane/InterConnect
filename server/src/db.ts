@@ -128,8 +128,12 @@ export async function getDb(): Promise<DatabaseInterface> {
   } else {
     console.log("💾 No DATABASE_URL found. Falling back to local SQLite database...");
     
-    const { open } = await import("sqlite");
-    const sqlite3 = await import("sqlite3");
+    // Hide sqlite module names from the Vercel packager so it doesn't search for native binaries
+    const sqliteLib = "sqlite";
+    const sqliteDriver = "sqlite3";
+    
+    const { open } = await import(sqliteLib);
+    const sqlite3 = await import(sqliteDriver);
 
     const dbPath = process.env.DATABASE_PATH || path.join(__dirname, "../database.sqlite");
     const sqliteDb = await open({
