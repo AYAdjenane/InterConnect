@@ -2,7 +2,7 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-const connectionString = 'postgresql://postgres:marouaAI1012@db.eglwbfhyddowlflqvpji.supabase.co:5432/postgres';
+const connectionString = 'postgresql://postgres.eglwbfhyddowlflqvpji:marouaAI1012@aws-0-eu-west-1.pooler.supabase.com:6543/postgres';
 
 const pool = new Pool({
   connectionString,
