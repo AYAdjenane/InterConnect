@@ -7,7 +7,7 @@ let db: Database<sqlite3.Database, sqlite3.Statement>;
 
 export async function getDb() {
   if (!db) {
-    const dbPath = path.join(__dirname, "../database.sqlite");
+    const dbPath = process.env.DATABASE_PATH || path.join(__dirname, "../database.sqlite");
     
     // Open SQLite database
     db = await open({

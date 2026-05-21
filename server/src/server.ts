@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import fs from "fs";
 import { getDb } from "./db";
 import authRouter from "./controllers/auth.controller";
 import profileRouter from "./controllers/profile.controller";
@@ -15,7 +17,19 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+const allowedOrigins = ["http://localhost:5173", process.env.FRONTEND_URL].filter(Boolean) as string[];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // Routes
@@ -31,7 +45,21 @@ app.get("/api/health", (_req, res) => {
   res.json({ success: true, data: { status: "ok" }, message: "InternConnect API is running." });
 });
 
-// 404 handler
+// Serve static frontend in production if built
+const frontendDistPath = path.join(__dirname, "../../dist");
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  
+  // Catch-all route to serve the SPA (since it's a single page app)
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDistPath, "index.html"));
+  });
+}
+
+// 404 handler for API routes (or when frontend build isn't present)
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: "Not Found", message: "Route not found." });
 });
@@ -48,3 +76,4 @@ start().catch((err) => {
   console.error("Failed to start server:", err);
   process.exit(1);
 });
+
